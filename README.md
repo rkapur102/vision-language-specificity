@@ -1,6 +1,6 @@
 # When More Words Say Less: Decoupling Length and Informativity in Image Description Evaluation
 
-This is the official repository for Kapur et al. (2026): "When More Words Say Less: Decoupling Length and Informativity in Image Description Evaluation" (preprint: LINK).
+This is the official repository for Kapur et al. (2026): "When More Words Say Less: Decoupling Length and Informativity in Image Description Evaluation" (preprint: https://arxiv.org/abs/2601.04609).
 
 ## Repository structure
 
