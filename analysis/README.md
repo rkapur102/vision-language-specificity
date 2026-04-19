@@ -1,1 +1,1 @@
-The analysis folder contains scripts used to generate Figures 2, 3, and 4 in the paper. The statistics folder contains scripts used to generate the significance statistics cited in Sections 4.2/4.3 (from_cdf.py) and Section 4.4 (from_vlm.py) of the paper. 
+The analysis folder contains scripts used to generate Figures 2, 3, and 4 in the paper. The statistics folder contains the paper-facing analysis scripts: `from_cdf.py`, `contrast_set_size.py`, `contrast_set_significance.py`, `hallucination_robustness.py`, and `from_vlm.py`.

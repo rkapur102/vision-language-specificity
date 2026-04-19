@@ -5,4 +5,4 @@ In order to try out one of the study, simply clone this Github repository and op
 
 The `data/` folder contains the anonymized data from both experiments.
 
-The `analysis/` folder contains an R Markdown file which has all human subject data analyses and statistical tests reported in the paper for replication.
+The `analysis/` folder contains an R Markdown file which has all human subject data analyses and statistical tests reported in the paper for replication. In particular, `analysis/analysis_paper.Rmd` includes the added human-subject covariate controls for average word frequency (excluding stopwords) and Flesch-Kincaid readability.

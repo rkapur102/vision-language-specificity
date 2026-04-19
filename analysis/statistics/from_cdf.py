@@ -115,6 +115,29 @@ for ref, comp in combinations(conditions, 2):
     else:
         print(f"  β = {beta:.2f}, z({dof})={z:.2f}, p = {p_value:.4f}, ΔR² = {delta_r2:.4f}")
 
+print("\nBetween-condition rank comparisons (controlling for image, mixed model):\n")
+
+import statsmodels.formula.api as smf
+
+for ref, comp in combinations(conditions, 2):
+    df_pair = df_filtered[df_filtered['description_label'].isin([ref, comp])].copy()
+    df_pair["condition_binary"] = (df_pair["description_label"] == comp).astype(int)
+
+    md = smf.mixedlm("rank ~ condition_binary", df_pair, groups=df_pair["image_id"])
+    mdf = md.fit(reml=True)
+
+    beta = mdf.fe_params["condition_binary"]
+    z = mdf.tvalues["condition_binary"]
+    p_value = mdf.pvalues["condition_binary"]
+    n = len(df_pair)
+    n_groups = len(df_pair["image_id"].unique())
+
+    print(f"{comp} vs {ref} (n={n}, n_images={n_groups}):")
+    if p_value < 0.001:
+        print(f"  β = {beta:.2f}, z={z:.2f}, p < 0.001")
+    else:
+        print(f"  β = {beta:.2f}, z={z:.2f}, p = {p_value:.4f}")
+
 print("\nBetween-condition length comparisons:\n")
 
 for ref, comp in combinations(conditions, 2):

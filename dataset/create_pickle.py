@@ -61,13 +61,18 @@ model, _ = clip.load("ViT-B/32", device=device)
 model.eval()
 
 records = []
+coco_captions_map = {}
 
 # first file
 with open(FILENAME_1, "r") as f:
     parser = ijson.kvitems(f, "")
     count = 0
-    
+
     for image_id, details in parser:
+        captions_list = details.get("captions", [])
+        if captions_list:
+            coco_captions_map[image_id] = captions_list
+
         for cap_type in caption_types_file1:
             caption = details.get(cap_type)
             if caption is None or caption.strip() == "":
@@ -100,11 +105,13 @@ with open(FILENAME_1, "r") as f:
                 length_val = np.nan
 
             records.append({
+                "image_id": image_id,
+                "caption": caption,
                 "description_label": label_map[cap_type],
                 "rank": rank,
                 "length": length_val,
             })
-        
+
         count += 1
         if count % 1000 == 0:
             print(f"  Processed {count} images...")
@@ -149,14 +156,23 @@ with open(FILENAME_2, "r") as f:
                 length_val = np.nan
 
             records.append({
+                "image_id": image_id,
+                "caption": caption,
                 "description_label": label_map[cap_type],
                 "rank": rank,
                 "length": length_val,
             })
-        
+
         count += 1
         if count % 1000 == 0:
             print(f"  Processed {count} images...")
 
 df = pd.DataFrame(records)
+
+coco_df = pd.DataFrame([
+    {"image_id": img_id, **{f"coco_caption_{i+1}": cap for i, cap in enumerate(caps)}}
+    for img_id, caps in coco_captions_map.items()
+])
+df = df.merge(coco_df, on="image_id", how="left")
+
 df.to_pickle(DATAFRAME_CACHE)

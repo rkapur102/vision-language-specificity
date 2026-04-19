@@ -10,6 +10,9 @@ output: rmarkdown::github_document
 library(tidyverse)
 library(lme4)
 library(lmerTest)
+library(tm)
+library(stringi)
+library(tidytext)
 theme_set(theme_bw())
 ```
 
@@ -41,6 +44,57 @@ df = df_import %>%
   )) %>% 
   mutate(descr_right_length = str_length(descr_right),
          descr_left_length = str_length(descr_left))
+```
+
+```{r compute readability and word frequency}
+count_syllables <- function(word) {
+  word <- tolower(word)
+  word <- gsub("[^a-z]", "", word)
+  if (nchar(word) == 0) return(1)
+  vowels <- gregexpr("[aeiouy]+", word)[[1]]
+  if (vowels[1] == -1) return(1)
+  count <- length(vowels)
+  if (grepl("e$", word) & count > 1) count <- count - 1
+  return(max(count, 1))
+}
+
+flesch_kincaid <- function(text) {
+  if (is.na(text) || text == "") return(NA_real_)
+  sentences <- max(stri_count_regex(text, "[.!?]+"), 1)
+  words_vec <- unlist(strsplit(gsub("[^a-zA-Z ]", "", tolower(text)), "\\s+"))
+  words_vec <- words_vec[words_vec != ""]
+  n_words <- length(words_vec)
+  if (n_words == 0) return(NA_real_)
+  n_syllables <- sum(sapply(words_vec, count_syllables))
+  0.39 * (n_words / sentences) + 11.8 * (n_syllables / n_words) - 15.59
+}
+
+avg_word_freq <- function(text, freq_table, stop_words_vec) {
+  if (is.na(text) || text == "") return(NA_real_)
+  words_vec <- unlist(strsplit(gsub("[^a-zA-Z ]", "", tolower(text)), "\\s+"))
+  words_vec <- words_vec[words_vec != "" & !(words_vec %in% stop_words_vec)]
+  if (length(words_vec) == 0) return(NA_real_)
+  freqs <- freq_table$n[match(words_vec, freq_table$word)]
+  freqs[is.na(freqs)] <- 1
+  mean(log(freqs))
+}
+
+# build word frequency table from all captions in the dataset
+stop_words_vec <- tidytext::stop_words$word
+
+all_captions <- c(df$descr_left, df$descr_right)
+freq_table <- tibble(text = all_captions) %>%
+  unnest_tokens(word, text) %>%
+  filter(!(word %in% stop_words_vec)) %>%
+  count(word, sort = TRUE)
+
+df <- df %>%
+  mutate(
+    descr_left_fk = sapply(descr_left, flesch_kincaid),
+    descr_right_fk = sapply(descr_right, flesch_kincaid),
+    descr_left_wf = sapply(descr_left, avg_word_freq, freq_table, stop_words_vec),
+    descr_right_wf = sapply(descr_right, avg_word_freq, freq_table, stop_words_vec)
+  )
 ```
 
 ```{r}
@@ -161,11 +215,13 @@ ggsave("infpref_barchart_prefonly_nogpt4o.pdf", width = 4.8, height=3)
 study_type = "preference"
 study_type = "informativity"
 
-df_stats = df %>%  
-  gather(location, caption_cond, descr_left_condition, descr_right_condition) %>% 
-  mutate(chosen = selected_descr_condition == caption_cond) %>% 
-  mutate(length = ifelse(location == "descr_left_condition", descr_left_length, descr_right_length)) %>% 
-  select(task_cond, caption_pair, chosen, caption_cond, length, anon_id, picture)
+df_stats = df %>%
+  gather(location, caption_cond, descr_left_condition, descr_right_condition) %>%
+  mutate(chosen = selected_descr_condition == caption_cond) %>%
+  mutate(length = ifelse(location == "descr_left_condition", descr_left_length, descr_right_length)) %>%
+  mutate(fk = ifelse(location == "descr_left_condition", descr_left_fk, descr_right_fk)) %>%
+  mutate(wf = ifelse(location == "descr_left_condition", descr_left_wf, descr_right_wf)) %>%
+  select(task_cond, caption_pair, chosen, caption_cond, length, fk, wf, anon_id, picture)
 
 # PREFERENCE
 # Coefficients:
@@ -234,6 +290,78 @@ model_verbose_composite = df_stats %>%
   glm(chosen ~ caption_cond + length, .,family = binomial(link = "logit"))
 summary(model_verbose_composite)
 
+
+###
+### Models with word frequency only ###
+###
+
+cat("\n=== Word Frequency Only ===\n")
+
+cat("\n--- coco_composite ---\n")
+model_coco_composite_wf = df_stats %>%
+  filter(caption_pair == "coco_composite", task_cond == study_type) %>%
+  glm(chosen ~ caption_cond + length + wf, ., family = binomial(link = "logit"))
+summary(model_coco_composite_wf)
+
+cat("\n--- coco_verbose ---\n")
+model_coco_verbose_wf = df_stats %>%
+  filter(caption_pair == "coco_verbose", task_cond == study_type) %>%
+  glm(chosen ~ caption_cond + length + wf, ., family = binomial(link = "logit"))
+summary(model_coco_verbose_wf)
+
+cat("\n--- verbose_composite ---\n")
+model_verbose_composite_wf = df_stats %>%
+  filter(caption_pair == "verbose_composite", task_cond == study_type) %>%
+  glm(chosen ~ caption_cond + length + wf, ., family = binomial(link = "logit"))
+summary(model_verbose_composite_wf)
+
+###
+### Models with Flesch-Kincaid only ###
+###
+
+cat("\n=== Flesch-Kincaid Only ===\n")
+
+cat("\n--- coco_composite ---\n")
+model_coco_composite_fk = df_stats %>%
+  filter(caption_pair == "coco_composite", task_cond == study_type) %>%
+  glm(chosen ~ caption_cond + length + fk, ., family = binomial(link = "logit"))
+summary(model_coco_composite_fk)
+
+cat("\n--- coco_verbose ---\n")
+model_coco_verbose_fk = df_stats %>%
+  filter(caption_pair == "coco_verbose", task_cond == study_type) %>%
+  glm(chosen ~ caption_cond + length + fk, ., family = binomial(link = "logit"))
+summary(model_coco_verbose_fk)
+
+cat("\n--- verbose_composite ---\n")
+model_verbose_composite_fk = df_stats %>%
+  filter(caption_pair == "verbose_composite", task_cond == study_type) %>%
+  glm(chosen ~ caption_cond + length + fk, ., family = binomial(link = "logit"))
+summary(model_verbose_composite_fk)
+
+###
+### Models with both word frequency and Flesch-Kincaid ###
+###
+
+cat("\n=== Word Frequency + Flesch-Kincaid ===\n")
+
+cat("\n--- coco_composite ---\n")
+model_coco_composite_both = df_stats %>%
+  filter(caption_pair == "coco_composite", task_cond == study_type) %>%
+  glm(chosen ~ caption_cond + length + wf + fk, ., family = binomial(link = "logit"))
+summary(model_coco_composite_both)
+
+cat("\n--- coco_verbose ---\n")
+model_coco_verbose_both = df_stats %>%
+  filter(caption_pair == "coco_verbose", task_cond == study_type) %>%
+  glm(chosen ~ caption_cond + length + wf + fk, ., family = binomial(link = "logit"))
+summary(model_coco_verbose_both)
+
+cat("\n--- verbose_composite ---\n")
+model_verbose_composite_both = df_stats %>%
+  filter(caption_pair == "verbose_composite", task_cond == study_type) %>%
+  glm(chosen ~ caption_cond + length + wf + fk, ., family = binomial(link = "logit"))
+summary(model_verbose_composite_both)
 
 ###
 ### Do specificity rating averages predict preferences? ###

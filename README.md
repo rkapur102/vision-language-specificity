@@ -1,6 +1,6 @@
 # When More Words Say Less: Decoupling Length and Informativity in Image Description Evaluation
 
-This is the official repository for Kapur et al. (2026): "When More Words Say Less: Decoupling Length and Informativity in Image Description Evaluation" (preprint: https://arxiv.org/abs/2601.04609).
+This is the official repository for Kapur et al. (2026): "When More Words Say Less: Decoupling Length and Informativity in Image Description Evaluation." To appear in Proceedings of the 64th Annual Meeting of the Association for Computational Linguistics (ACL 2026). Preprint: https://arxiv.org/abs/2601.04609
 
 ## Repository structure
 
@@ -16,7 +16,7 @@ The `generation_scripts/` subdirectory contains code for generating synthetic de
 
 This folder contains scripts for generating figures and statistics reported in the paper:
 - `figures/` — generates Figures 2, 3, and 4
-- `statistics/` — generates significance tests from Sections 4.2/4.3 (`from_cdf.py`) and 4.4 (`from_vlm.py`)
+- `statistics/` — generates significance tests from Sections 4.2/4.3 (`from_cdf.py`), the hallucination robustness analysis (`hallucination_robustness.py`) from Section 4.2.1, the contrast-set-size ablation (`contrast_set_size.py`, `contrast_set_significance.py`) from Section 4.2.2, and Section 4.4 (`from_vlm.py`)
 
 ### `human_subject_experiment/`
 
@@ -25,7 +25,7 @@ This folder contains two human subject studies: `informativity_study/` (informat
 To run either study, open `index.html` in your browser.
 
 - `data/` — anonymized participant data
-- `analysis/` — R Markdown file with all analyses and statistical tests
+- `analysis/` — R Markdown file with all analyses and statistical tests, including the Section 4.1 human-subject covariate controls for average word frequency and Flesch-Kincaid readability
 
 ## Contact
 
