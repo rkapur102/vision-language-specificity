@@ -2,7 +2,9 @@ import time
 import pandas as pd
 from openai import OpenAI
 
-# expects OPENAI_API_KEY to be set in the environment
+# removed api key 
+# os.environ['OPENAI_API_KEY'] =
+
 client = OpenAI()
 
 # This script updates the canonical hallucination results CSV in place. The
